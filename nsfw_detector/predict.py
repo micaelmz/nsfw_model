@@ -10,43 +10,32 @@ import tensorflow as tf
 from tensorflow import keras
 import tensorflow_hub as hub
 
+import requests
+from io import BytesIO
+
 
 IMAGE_DIM = 224   # required/default image dimensionality
 
+
 def load_images(image_paths, image_size, verbose=True):
-    '''
-    Function for loading images into numpy arrays for passing to model.predict
-    inputs:
-        image_paths: list of image paths to load
-        image_size: size into which images should be resized
-        verbose: show all of the image path and sizes loaded
-    
-    outputs:
-        loaded_images: loaded images on which keras model can run predictions
-        loaded_image_indexes: paths of images which the function is able to process
-    
-    '''
     loaded_images = []
     loaded_image_paths = []
-
-    if isdir(image_paths):
-        parent = abspath(image_paths)
-        image_paths = [join(parent, f) for f in listdir(image_paths) if isfile(join(parent, f))]
-    elif isfile(image_paths):
-        image_paths = [image_paths]
 
     for img_path in image_paths:
         try:
             if verbose:
                 print(img_path, "size:", image_size)
-            image = keras.preprocessing.image.load_img(img_path, target_size=image_size)
+
+            # Download the image from the URL
+            response = requests.get(img_path)
+            image = keras.preprocessing.image.load_img(BytesIO(response.content), target_size=image_size)
             image = keras.preprocessing.image.img_to_array(image)
             image /= 255
             loaded_images.append(image)
             loaded_image_paths.append(img_path)
         except Exception as ex:
             print("Image Load Failure: ", img_path, ex)
-    
+
     return np.asarray(loaded_images), loaded_image_paths
 
 def load_model(model_path):
